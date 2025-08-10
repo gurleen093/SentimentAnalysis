@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="skAxEQ216k86ivIm-6F3QsmaA4ybwMEA8K3FYY90BlL3i6T3BlbkFJmi_G5oiL1Ugg21PrajbyYRSSeRtCgA")
 
 
 def explain_negative(review_text: str) -> str:
