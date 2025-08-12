@@ -4,8 +4,17 @@ from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv()
-client = OpenAI(api_key="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")
+import pathlib
+env_path = pathlib.Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path, override=True)
+
+def get_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment variables")
+    return OpenAI(api_key=api_key)
+
+client = get_client()
 
 
 def explain_negative(review_text: str) -> str:
@@ -13,7 +22,8 @@ def explain_negative(review_text: str) -> str:
     Uses OpenAI to return a short, specific explanation for why the review is negative.
     """
     try:
-        resp = client.chat.completions.create(
+        fresh_client = get_client()
+        resp = fresh_client.chat.completions.create(
             model="gpt-4o-mini",  # or gpt-3.5-turbo if you want cheaper/faster
             messages=[{
                 "role": "user",
@@ -34,7 +44,8 @@ def rephrase_brand_friendly(review_text: str) -> str:
     Uses OpenAI to rewrite the review in a polite, neutral, brand-friendly tone without changing meaning.
     """
     try:
-        resp = client.chat.completions.create(
+        fresh_client = get_client()
+        resp = fresh_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{
                 "role": "user",

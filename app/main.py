@@ -4,6 +4,9 @@ from typing import Dict, Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 from app.ensemble import Ensemble
 from app.llm import explain_negative, rephrase_brand_friendly

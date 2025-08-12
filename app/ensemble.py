@@ -10,10 +10,12 @@ LABELS = ["negative", "neutral", "positive"]
 
 NEG_CUES = {
     "broken","damaged","defective","cracked","faulty","leaking","scratched",
-    "late","delay","delayed","missing","lost",
-    "refund","return","replacement","cancelled","scam",
-    "disappointed","worst","terrible","awful","poor","bad","rude",
-    "doesn't work","didn't work","not working","stopped working"
+    "late","delay","delayed","missing","lost","slow","never arrived",
+    "refund","return","replacement","cancelled","scam","fraud","fake",
+    "disappointed","worst","terrible","awful","poor","bad","rude","horrible",
+    "hate","useless","waste","money","trash","garbage","pathetic","disgusted",
+    "doesn't work","didn't work","not working","stopped working","failure",
+    "avoid","warning","regret","mistake","problem","issue","complain","angry"
 }
 
 def _soft_scores(model, X):
@@ -23,8 +25,14 @@ def _contains_cues(text: str) -> bool:
     t = text.lower()
     if any(w in t for w in NEG_CUES):
         return True
-    # simple bigram negation pattern
-    if re.search(r"\bnot (good|great|working|as described|worth)\b", t):
+    # enhanced negation patterns
+    if re.search(r"\bnot (good|great|working|as described|worth|satisfied|happy|pleased|recommend)\b", t):
+        return True
+    # poor quality indicators
+    if re.search(r"\b(1|one) star|poor quality|low quality|waste of money|do not buy|don't buy\b", t):
+        return True
+    # disappointment patterns
+    if re.search(r"\bexpected (better|more)|fell apart|broke (down|after)|within (days|weeks) of\b", t):
         return True
     return False
 
@@ -88,13 +96,22 @@ class Ensemble:
         ml_avg = np.mean(np.vstack(probs), axis=0)            # (3,)
         combined = (ml_avg * 1.0 + vader_p * 0.6) / (1.0 + 0.6)
 
-        # 4) Keyword cue nudge toward negative when obvious red flags appear
+        # 4) Enhanced keyword cue nudge toward negative when obvious red flags appear
         if _contains_cues(text):
-            combined[0] += 0.15  # boost negative
-            combined[2] -= 0.10  # dampen positive a bit
-            combined[1] -= 0.05  # and neutral slightly
+            combined[0] += 0.25  # stronger boost to negative
+            combined[2] -= 0.15  # stronger dampening of positive 
+            combined[1] -= 0.10  # stronger dampening of neutral
             # re-normalize
             combined = np.clip(combined, 0, None)
+            combined = combined / combined.sum()
+
+        # 5) Additional anti-neutral bias for potential negatives
+        # If negative probability is reasonably high but neutral is winning, bias toward negative
+        if combined[1] > combined[0] and combined[0] > 0.25:  # neutral winning but negative substantial
+            # Transfer some probability from neutral to negative
+            transfer = min(0.1, combined[1] * 0.3)
+            combined[0] += transfer
+            combined[1] -= transfer
             combined = combined / combined.sum()
 
         final_idx = int(np.argmax(combined))
